@@ -66,6 +66,73 @@ Scoring logic and ranking logic are kept separate: scoring logic calculates a `f
 
 ---
 
+## Phase 2 Step 4: Recommendation Flow Visualization
+
+### Mermaid Flowchart
+
+```mermaid
+flowchart TD
+    U[UserProfile: favorite_genre, favorite_mood, target_energy, likes_acoustic]
+    CSV[data/songs.csv]
+    LOAD[Load each song from CSV]
+    LOOP{For each song in catalog}
+    GENRE["genre_score = 2.0 if song.genre == favorite_genre else 0"]
+    MOOD["mood_score = 1.0 if song.mood == favorite_mood else 0"]
+    ENERGY["energy_score = 1 - abs(song.energy - target_energy)"]
+    ACOUSTIC["acoustic_score = song.acousticness if likes_acoustic else 1 - song.acousticness"]
+    SUM["final_score = genre_score + mood_score + energy_score + acoustic_score"]
+    STORE[Store song, final_score, and explanation]
+    NEXT{More songs left?}
+    SORT[Sort all scored songs by final_score, highest to lowest]
+    TOPK[Return Top K recommended songs]
+
+    CSV --> LOAD --> LOOP
+    U --> LOOP
+    LOOP --> GENRE
+    LOOP --> MOOD
+    LOOP --> ENERGY
+    LOOP --> ACOUSTIC
+    GENRE --> SUM
+    MOOD --> SUM
+    ENERGY --> SUM
+    ACOUSTIC --> SUM
+    SUM --> STORE --> NEXT
+    NEXT -->|yes| LOOP
+    NEXT -->|no| SORT
+    SORT --> TOPK
+```
+
+### Text-Based Diagram
+
+```
+UserProfile ─┐
+             ├─> For each song in songs.csv:
+data/songs.csv ─┘        │
+                          ├─ genre_score    = 2.0 if genre matches else 0
+                          ├─ mood_score     = 1.0 if mood matches else 0
+                          ├─ energy_score   = 1 - abs(song.energy - target_energy)
+                          ├─ acoustic_score = acousticness (or 1 - acousticness)
+                          │
+                          └─ final_score = sum of the above
+                                  │
+                                  v
+                          store (song, final_score, explanation)
+                                  │
+                    (repeat for every song in catalog)
+                                  │
+                                  v
+                sort all (song, score, explanation) by final_score, desc
+                                  │
+                                  v
+                          return Top K recommendations
+```
+
+### How One Song Moves Through the Pipeline
+
+A single song is read from `data/songs.csv` and paired with the current `UserProfile`. It's scored in isolation: genre and mood are checked for an exact match (contributing 2.0 and 1.0 points respectively), energy contributes a 0–1 value based on how close the song's energy is to `target_energy`, and acousticness contributes a 0–1 value based on the `likes_acoustic` preference. These four values are added into one `final_score`, and the song is stored alongside its score and a short explanation. Once every song in the catalog has gone through this same process, the full list is sorted by `final_score` from highest to lowest, and only the Top K songs are returned as recommendations.
+
+---
+
 ## Agentic Workflow (SF8)
 
 > Document your experience using an AI agent (e.g., Cursor Agent, Claude, Copilot) to make multi-step changes autonomously.
