@@ -2,8 +2,9 @@
 
 ## 1. Model Name  
 
-Give your model a short, descriptive name.  
-Example: **VibeFinder 1.0**  
+**VibeFinder 1.0**
+
+A simple, explainable recommender that picks songs by comparing a listener's stated taste to each song's tags and numbers.
 
 ---
 
@@ -16,6 +17,12 @@ Prompts:
 - What kind of recommendations does it generate  
 - What assumptions does it make about the user  
 - Is this for real users or classroom exploration  
+
+**Goal:** VibeFinder suggests songs by comparing a user's taste profile (favorite genre, favorite mood, target energy, and whether they like acoustic songs) to each song's features, and recommending whichever songs match best.
+
+**Intended use:** This is a beginner educational simulation. It's meant to help me understand, hands-on, how a scoring-and-ranking recommender works under the hood — not to serve real listeners. It assumes a user can state simple, clear preferences up front; it does not learn from listening history or feedback.
+
+**Non-intended use:** VibeFinder is not meant for a real music app. It is not production-level software, and it is not personalized enough for real users — it only knows four simple preferences and works off of a tiny, fictional catalog of songs.
 
 ---
 
@@ -32,6 +39,15 @@ Prompts:
 
 Avoid code here. Pretend you are explaining the idea to a friend who does not program.
 
+VibeFinder gives every song a score based on how well it matches the listener's taste profile, then recommends the highest-scoring songs.
+
+- If a song's genre matches the listener's favorite genre, it earns extra points — this is the biggest single bonus.
+- If a song's mood matches the listener's favorite mood, it earns a smaller bonus.
+- If a song's energy level is close to the energy the listener asked for, it earns points for that closeness. A song doesn't have to match exactly — the closer it is, the more points it earns.
+- If the listener likes acoustic songs, more acoustic songs earn more points; if the listener does not like acoustic songs, less acoustic songs earn more points instead.
+- All of these points get added together into one final score for the song.
+- Once every song in the catalog has a score, they're sorted from highest to lowest, and the top few are shown as recommendations, along with a short explanation of why each one was picked.
+
 ---
 
 ## 4. Data  
@@ -45,6 +61,8 @@ Prompts:
 - Did you add or remove data  
 - Are there parts of musical taste missing in the dataset  
 
+The dataset lives in `data/songs.csv` and currently has 10 songs (it will grow to 18 once the additional fictional songs drafted for Phase 2 are pasted in). Each song has a title, an artist, a genre tag, a mood tag, and five numeric features: energy, tempo_bpm, valence, danceability, and acousticness. All of the songs and artists are fictional and made up for this project — none of them are real tracks. The dataset is intentionally small and sample-based rather than a realistic catalog, so some genres and moods are represented only once or twice, and parts of musical taste (tempo, valence, danceability, lyrics, instrumentation) aren't factored into the scoring yet even though the data for some of them already exists.
+
 ---
 
 ## 5. Strengths  
@@ -56,6 +74,8 @@ Prompts:
 - User types for which it gives reasonable results  
 - Any patterns you think your scoring captures correctly  
 - Cases where the recommendations matched your intuition  
+
+The recommender works well whenever a listener's genre, mood, and numeric preferences all point the same direction. The High-Energy Pop, Chill Lofi, and Deep Intense Rock profiles (see Evaluation below) each produced a clear, obviously-correct #1 recommendation — a song that was already tagged with the right genre and mood, and that also happened to sit close to the requested energy level and acoustic preference. In those "everything agrees" cases, the scoring behaves exactly the way a person would expect it to.
 
 ---
 
@@ -70,7 +90,7 @@ Prompts:
 - Cases where the system overfits to one preference  
 - Ways the scoring might unintentionally favor some users  
 
-The scoring formula may over-prioritize genre by giving it the largest fixed bonus (+2.0), so a song can rank highly even when its mood, energy, and acousticness are not a perfect fit. Because the catalog is small, with only a limited number of songs and some genres or moods represented only once, certain user profiles may not have many strong candidates to choose from. The `likes_acoustic` field is also too simple because it forces every user into a True/False preference, while real acoustic preference is usually more flexible. The weight-shift experiment showed that changing feature weights can significantly change the rankings, meaning the recommender is sensitive to design choices and could accidentally override a user's stated preference.
+The scoring formula may over-prioritize genre by giving it the largest fixed bonus (+2.0), so a song can rank highly even when its mood, energy, and acousticness are not a perfect fit. Because the catalog is small, with only a limited number of songs and some genres or moods represented only once, certain user profiles may not have many strong candidates to choose from. The `likes_acoustic` field is also too simple because it forces every user into a True/False preference, while real acoustic preference is usually more flexible. The weight-shift experiment showed that changing feature weights can significantly change the rankings, meaning the recommender is sensitive to design choices and could accidentally override a user's stated preference. The system can also create a filter bubble: because genre and mood dominate the score and the catalog is small, the same handful of songs tend to resurface at the top for a given profile, with no built-in way to encourage variety or new discovery.
 
 ---
 
@@ -89,7 +109,7 @@ No need for numeric metrics unless you created some.
 
 ### Profiles Tested
 
-I ran `python -m src.main` against four kinds of user profiles to see how the recommender behaves: three "normal" listener personas, and one adversarial profile designed to expose weaknesses.
+I ran `python -m src.main` against four kinds of user profiles to see how the recommender behaves: three "normal" listener personas (High-Energy Pop, Chill Lofi, Deep Intense Rock), and one adversarial profile designed to expose weaknesses (Conflicting Signals). I compared the top recommendations across all four to see whether the scoring behaved consistently, and I also ran a weight-shift experiment — temporarily changing the genre and energy weights — to see how much the rankings changed when the formula was tuned differently (see Limitations and Bias above for what that revealed).
 
 **1. High-Energy Pop** (`favorite_genre="pop"`, `favorite_mood="happy"`, `target_energy=0.85`, `likes_acoustic=False`)
 
@@ -222,6 +242,10 @@ Prompts:
 - Improving diversity among the top results  
 - Handling more complex user tastes  
 
+- Add real user feedback: track likes, skips, playlists, and listening history so the recommender can learn over time instead of relying only on a static, hand-entered profile.
+- Expand the dataset with more songs so genres and moods are represented more than once or twice each, and add diversity scoring so the top results don't repeatedly surface the same handful of songs.
+- Add preferences for tempo, valence, and danceability (the data already exists in `songs.csv`, it's just not scored yet) for finer-grained matching, and longer-term, explore collaborative filtering — recommending based on what similar listeners liked — instead of relying only on hand-written scoring rules.
+
 ---
 
 ## 9. Personal Reflection  
@@ -233,3 +257,13 @@ Prompts:
 - What you learned about recommender systems  
 - Something unexpected or interesting you discovered  
 - How this changed the way you think about music recommendation apps  
+
+**Biggest learning moment:** I learned that recommendation systems are not magic — they are built from clear scoring rules and ranking decisions. Once I could see the actual math behind each recommendation (genre points + mood points + energy closeness + acoustic preference, all added together), the idea of a "recommendation algorithm" stopped feeling mysterious.
+
+**How AI tools helped:** Claude helped me brainstorm formulas, debug code, and explain results — from designing the initial scoring recipe, to implementing `load_songs`/`score_song`/`recommend_songs`, to walking through why a specific song ranked where it did.
+
+**When I needed to double-check the AI:** I still had to check whether the weights matched my intended design. For example, I caught that the CLI's default profile had mismatched dictionary keys that would have silently crashed the recommender, and I had to explicitly decide whether to keep or revert the weight-shift experiment rather than assume the "new" numbers were automatically better.
+
+**What surprised me:** I was surprised that even a simple weighted-score algorithm could produce recommendations that felt reasonable — a handful of if-statements and one subtraction formula were enough to produce a top pick that "made sense" for each listener persona.
+
+**What I'd try next:** If I extended the project, I would add real user feedback like likes, skips, playlists, and listening history, so the recommender could learn from behavior instead of only comparing static preferences.
