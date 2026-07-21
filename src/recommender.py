@@ -164,4 +164,9 @@ def recommend_songs(
         seen_genres.add(song["genre"])
         seen_artists.add(song["artist"])
 
+    # The greedy loop above selects songs in base-score order so penalties are
+    # measured against earlier picks. Re-sort the final list by adjusted score
+    # (highest first) so the displayed order matches the post-penalty scores.
+    recommendations.sort(key=lambda item: item[1], reverse=True)
+
     return recommendations
